@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Tout est local : ni réseau, ni code dynamique, ni style en ligne -->
+<meta http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self';
+               img-src 'self' data: blob:; connect-src 'self' blob: data:">
+<title>Poids Plume</title>
+<link rel="stylesheet" href="polices.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="maj" id="maj" hidden>
+  <span class="maj-point"></span>
+  <span class="maj-texte" id="majTexte"></span>
+  <span class="maj-barre" id="majBarre" hidden><i id="majJauge"></i></span>
+  <button type="button" class="maj-action" id="majAction" hidden>Redémarrer maintenant</button>
+  <button type="button" class="maj-fermer" id="majFermer" title="Masquer" aria-label="Masquer">✕</button>
+</div>
+<header class="masthead">
+  <div class="wrap">
+    <h1 class="wordmark">Poids <span>Plume</span></h1>
+    <p class="tagline">Pesez, compressez et allégez vos PDF — sans jamais les envoyer ailleurs.</p>
+    <span class="seal">Traitement local</span>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <button type="button" class="dropzone" id="drop">
+    <svg class="scale-icon" width="34" height="34" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">
+      <path d="M12 3v18M7 21h10M3 8h18M3 8l-2 6a3.2 3.2 0 0 0 4 0zM21 8l2 6a3.2 3.2 0 0 1-4 0z"/>
+      <circle cx="12" cy="5.4" r="1.3" fill="currentColor" stroke="none"/>
+    </svg>
+    <h2>Déposez vos PDF ici</h2>
+    <p>ou <span class="u">parcourez vos fichiers</span> (Ctrl+O) — plusieurs à la fois, sans limite de taille</p>
+  </button>
+  <input type="file" id="picker" accept="application/pdf,.pdf" multiple hidden>
+
+  <section class="settings">
+    <div class="settings-head">
+      <p class="eyebrow">Niveau de compression</p>
+      <p class="note">Les quatre premiers niveaux gardent le texte sélectionnable.</p>
+    </div>
+
+    <div class="levels" id="levels">
+      <button type="button" class="level" data-level="leger" aria-pressed="false">
+        <b>Léger</b><span>Qualité intacte</span>
+      </button>
+      <button type="button" class="level" data-level="equilibre" aria-pressed="true">
+        <b>Équilibré</b><span>Recommandé</span>
+      </button>
+      <button type="button" class="level" data-level="fort" aria-pressed="false">
+        <b>Fort</b><span>Priorité au poids</span>
+      </button>
+      <button type="button" class="level" data-level="extreme" aria-pressed="false">
+        <b>Extrême</b><span>Pages en images</span>
+      </button>
+      <button type="button" class="level level-target" data-level="cible" aria-pressed="false">
+        <b id="limitName">Moins de 1 Mo</b><span>Poids imposé</span>
+      </button>
+    </div>
+
+    <div class="limit" id="limitRow" hidden>
+      <label for="limitValue">Ne pas dépasser</label>
+      <input type="number" id="limitValue" value="1" min="0.05" max="500" step="0.5">
+      <select id="limitUnit" aria-label="Unité">
+        <option value="1048576" selected>Mo</option>
+        <option value="1024">Ko</option>
+      </select>
+      <div class="presets" id="limitPresets">
+        <button type="button" data-mo="0.5" aria-pressed="false">500 Ko</button>
+        <button type="button" data-mo="1" aria-pressed="true">1 Mo</button>
+        <button type="button" data-mo="2" aria-pressed="false">2 Mo</button>
+        <button type="button" data-mo="5" aria-pressed="false">5 Mo</button>
+        <button type="button" data-mo="10" aria-pressed="false">10 Mo</button>
+      </div>
+      <p class="hint">Le réglage le plus doux qui tient sous cette limite est trouvé en quelques essais.</p>
+    </div>
+
+    <details class="advanced">
+      <summary>Réglages manuels</summary>
+      <div class="fields">
+        <label class="field">
+          <span>Qualité JPEG <b id="qOut">68 %</b></span>
+          <input type="range" id="quality" min="20" max="95" value="68">
+        </label>
+        <label class="field">
+          <span>Résolution maximale des images <b id="rOut">1700 px</b></span>
+          <input type="range" id="maxSide" min="600" max="3000" step="100" value="1700">
+        </label>
+        <label class="check">
+          <input type="checkbox" id="raster">
+          <span>Transformer les pages en images <em>— compression maximale, le texte n'est plus sélectionnable</em></span>
+        </label>
+        <label class="field" id="dpiField" hidden>
+          <span>Finesse du rendu <b id="dOut">110 ppp</b></span>
+          <input type="range" id="dpi" min="60" max="200" step="5" value="110">
+        </label>
+        <label class="check">
+          <input type="checkbox" id="gray">
+          <span>Convertir en niveaux de gris</span>
+        </label>
+        <label class="check">
+          <input type="checkbox" id="meta" checked>
+          <span>Effacer les métadonnées <em>— auteur, logiciel d'origine, historique</em></span>
+        </label>
+      </div>
+    </details>
+  </section>
+
+  <section class="ledger">
+    <div class="ledger-head">
+      <h2>Pesée</h2>
+      <div class="totals" id="totals">
+        <span class="n" id="tBefore">—</span>
+        <span class="arrow">→</span>
+        <span class="n" id="tAfter">—</span>
+        <span class="saved" id="tSaved"></span>
+      </div>
+      <div class="actions">
+        <button type="button" class="btn quiet" id="clear" disabled>Vider</button>
+        <button type="button" class="btn quiet" id="saveBeside" disabled
+                title="Écrire les fichiers allégés dans le dossier de chaque original">À côté des originaux</button>
+        <button type="button" class="btn" id="saveAll" disabled>Tout enregistrer…</button>
+      </div>
+    </div>
+
+    <ul class="files" id="files">
+      <!-- Ligne d'exemple : elle disparaît au premier fichier déposé -->
+      <li class="row sample" id="sampleRow">
+        <div class="thumb blank"></div>
+        <div class="cell">
+          <div class="row-top">
+            <span class="name">catalogue-2026.pdf</span>
+            <span class="tag">exemple</span>
+          </div>
+          <div class="gauge done"><i></i></div>
+          <div class="measures">
+            <span>6,8 Mo</span><span>→</span>
+            <span class="after">825 Ko</span>
+            <span class="delta">−88 %</span>
+          </div>
+          <p class="detail">4 images ré-encodées sur 4 · texte préservé</p>
+        </div>
+        <div class="row-actions"></div>
+      </li>
+    </ul>
+  </section>
+</main>
+
+<footer class="colophon">
+  <div class="wrap">
+    <div>
+      <h3>Confidentialité</h3>
+      <p>Vos fichiers ne quittent jamais cet ordinateur : l'application ne se connecte
+         à rien et fonctionne sans internet. Les originaux ne sont jamais modifiés.</p>
+    </div>
+    <div>
+      <h3>Version</h3>
+      <p><span id="versionTexte">—</span><br>
+         Les mises à jour arrivent toutes seules, pendant que vous travaillez.</p>
+    </div>
+    <div>
+      <h3>Méthode</h3>
+      <p>Les images intégrées sont redimensionnées et ré-encodées ; le texte, les polices
+         et les liens restent intacts. Les scans en <code>JBIG2</code>, <code>CCITT</code>
+         et les images <code>CMYK</code> sont laissés tels quels.</p>
+    </div>
+  </div>
+</footer>
+
+<div class="toast" id="toast" role="status" aria-live="polite">
+  <span id="toastText"></span>
+  <button type="button" class="toast-action" id="toastAction" hidden>Ouvrir le dossier</button>
+</div>
+
+<script src="vendor/pdf-lib.min.js"></script>
+<script src="vendor/pdf.min.js"></script>
+<!-- Chargé comme script ordinaire : pdf.js s'en sert sur le fil principal,
+     un Worker étant impossible depuis une page ouverte en fichier local. -->
+<script src="vendor/pdf.worker.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

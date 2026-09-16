@@ -1,0 +1,6 @@
+node_modules/
+dist/
+publication/
+test/apercu.png
+test/fenetre.png
+test/maj.png

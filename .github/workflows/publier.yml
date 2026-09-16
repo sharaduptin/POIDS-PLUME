@@ -1,0 +1,36 @@
+# Publie une nouvelle version dès qu'une étiquette « v… » est poussée.
+#
+#   npm version patch      (incrémente la version et crée l'étiquette)
+#   git push --follow-tags
+#
+# GitHub construit l'installateur puis le dépose en « Release ». Les postes
+# déjà installés le voient au démarrage suivant et ne téléchargent que les
+# blocs modifiés. Rien à construire ni à téléverser à la main.
+
+name: Publier une version
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:          # permet aussi de lancer à la main depuis GitHub
+
+permissions:
+  contents: write             # nécessaire pour créer la Release
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Construire et publier
+        run: npx electron-builder --win --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
