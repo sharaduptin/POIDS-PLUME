@@ -1,6 +1,6 @@
 {
   "name": "poids-plume",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Compresseur de PDF hors ligne",
   "main": "src/main.js",
   "author": "Maxence",
