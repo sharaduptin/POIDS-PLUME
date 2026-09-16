@@ -88,9 +88,29 @@ remplacer `build.publish` par
 puis `npm run publier` et téléverser le contenu de `publication/`. Cet hébergement
 doit accepter les requêtes multi-plages (voir ci-dessous).
 
+### Le volume téléchargé, selon l'hébergement
+
+GitHub Releases **ne permet pas le téléchargement différentiel** : son CDN
+(`release-assets.githubusercontent.com`) répond `501 Not Implemented` aux requêtes
+multi-plages. L'application le constate, l'inscrit dans son journal
+(« Cannot download differentially, fallback to full download ») et récupère
+l'installateur entier — 79 Mo, en arrière-plan, sans que l'utilisateur ait rien à faire.
+
+Pour retrouver les ~1,5 Mo par mise à jour, il faut servir les fichiers depuis un
+hébergement qui accepte les requêtes multi-plages (Apache et nginx le font ; un
+mutualisé OVH convient). Le code peut rester sur GitHub : seule l'adresse consultée
+change. Dans `package.json` :
+
+```json
+"publish": [{ "provider": "generic", "url": "https://mondomaine.fr/poids-plume/" }]
+```
+
+puis `npm run publier` et téléverser le contenu de `publication/`.
+Mesuré sur un tel hébergement : 58 blocs modifiés, 1 230 Ko sur 80 763 (2 %).
+
 ### Ce que l'hébergement doit savoir faire
 
-GitHub le fait déjà. Pour un hébergement classique (FTP, OVH, S3, nginx…), deux
+Pour un hébergement classique (FTP, OVH, S3, nginx…), deux
 conditions : servir les fichiers en HTTPS sans authentification, et accepter les
 **requêtes multi-plages** (`Range: bytes=0-99, 500-999`) avec une réponse en
 `multipart/byteranges`. Sans cela tout fonctionne encore, mais chaque mise à jour
