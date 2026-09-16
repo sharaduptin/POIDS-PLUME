@@ -59,25 +59,44 @@ Soit 1,2 Mo au lieu de 79 Mo, en une seconde.
 
 ### Mettre une version en ligne
 
-1. Renseigner une seule fois l'adresse dans `package.json` :
-   `build.publish[0].url`, par exemple `https://mondomaine.fr/poids-plume/`.
-2. Augmenter `version` dans `package.json`.
-3. `npm run publier`
-4. Téléverser le contenu de `publication/` à cette adresse.
+La publication passe par GitHub : le dépôt construit l'installateur lui-même et le
+met en ligne. Rien à compiler ni à téléverser à la main.
 
-**Ne supprimez jamais les fichiers des versions précédentes** : le `.blockmap` de
-l'ancienne version est ce qui permet de ne télécharger que les différences.
+```
+npm version patch        # 1.1.0 -> 1.1.1  (ou « minor » pour 1.2.0)
+git push --follow-tags
+```
+
+L'étiquette déclenche `.github/workflows/publier.yml` : GitHub construit sur une
+machine Windows, crée la Release et y dépose l'installateur, son `.blockmap` et le
+`latest.yml`. Une dizaine de minutes plus tard, chaque poste installé voit la
+nouvelle version au démarrage suivant et ne télécharge que les blocs modifiés.
+
+Les fichiers des versions précédentes restent dans leurs Releases : c'est ce qui
+permet la comparaison par blocs. Ne les supprimez pas.
+
+### Le dépôt doit être public
+
+Les Releases d'un dépôt privé exigent un jeton d'accès pour être téléchargées, que
+les postes de vos utilisateurs n'ont pas. Le dépôt doit donc être **public** pour que
+les mises à jour fonctionnent. Le code y est visible, ce qui ne pose pas de problème
+ici : il ne contient ni clé, ni mot de passe, ni donnée personnelle.
+
+Si le code doit rester privé, il faut revenir à un hébergement de fichiers classique :
+remplacer `build.publish` par
+`[{ "provider": "generic", "url": "https://mondomaine.fr/poids-plume/" }]`,
+puis `npm run publier` et téléverser le contenu de `publication/`. Cet hébergement
+doit accepter les requêtes multi-plages (voir ci-dessous).
 
 ### Ce que l'hébergement doit savoir faire
 
-Un simple hébergement de fichiers suffit (FTP, OVH, S3, nginx…), à deux conditions :
-
-- servir les fichiers en HTTPS sans authentification ;
-- accepter les **requêtes multi-plages** (`Range: bytes=0-99, 500-999`) et répondre
-  en `multipart/byteranges`. Sans cela tout fonctionne encore, mais chaque mise à
-  jour retélécharge les 79 Mo. C'est exactement le piège rencontré pendant la mise
-  au point : `outils/servir-test.js` ne gérait qu'une plage à la fois, et le
-  différentiel retombait silencieusement sur le téléchargement complet.
+GitHub le fait déjà. Pour un hébergement classique (FTP, OVH, S3, nginx…), deux
+conditions : servir les fichiers en HTTPS sans authentification, et accepter les
+**requêtes multi-plages** (`Range: bytes=0-99, 500-999`) avec une réponse en
+`multipart/byteranges`. Sans cela tout fonctionne encore, mais chaque mise à jour
+retélécharge les 79 Mo — le piège rencontré pendant la mise au point :
+`outils/servir-test.js` ne gérait qu'une plage à la fois, et le différentiel
+retombait silencieusement sur le téléchargement complet.
 
 ### Éprouver le mécanisme sans rien mettre en ligne
 
